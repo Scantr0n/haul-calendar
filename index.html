@@ -1,0 +1,962 @@
+<title>Haul Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Karla:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#DAD5C3; --surface:#F3EFE2; --surface-2:#E7E1CD; --surface-3:#DCD5BE;
+    --ink:#24282B; --ink-soft:#5B5648; --ink-faint:#8A8471; --rule:#BFB699;
+    --accent:#B8790F; --accent-ink:#241A06; --accent-soft:#EAD9AE;
+    --cat-cars:#A3402A; --cat-flea:#7A5A2A; --cat-vintage:#834A61; --cat-art:#3C6656; --cat-sports:#2E4E6E; --cat-startup:#5C4A8C;
+    --shadow: 0 1px 0 rgba(36,40,43,.06), 0 6px 16px rgba(36,40,43,.10);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#1B1D1F; --surface:#242729; --surface-2:#2C3033; --surface-3:#34383B;
+      --ink:#EDE7D8; --ink-soft:#B9B29C; --ink-faint:#7D7869; --rule:#3C3F3F;
+      --accent:#E3A83D; --accent-ink:#1A1204; --accent-soft:#4A3A17;
+      --cat-cars:#D9704F; --cat-flea:#B08B4F; --cat-vintage:#C07C93; --cat-art:#6FA791; --cat-sports:#6C93B8; --cat-startup:#A794D6;
+      --shadow: 0 1px 0 rgba(0,0,0,.3), 0 8px 20px rgba(0,0,0,.4);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#1B1D1F; --surface:#242729; --surface-2:#2C3033; --surface-3:#34383B;
+    --ink:#EDE7D8; --ink-soft:#B9B29C; --ink-faint:#7D7869; --rule:#3C3F3F;
+    --accent:#E3A83D; --accent-ink:#1A1204; --accent-soft:#4A3A17;
+    --cat-cars:#D9704F; --cat-flea:#B08B4F; --cat-vintage:#C07C93; --cat-art:#6FA791; --cat-sports:#6C93B8;
+    --shadow: 0 1px 0 rgba(0,0,0,.3), 0 8px 20px rgba(0,0,0,.4);
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--ground); color:var(--ink); font-family:'Karla',system-ui,sans-serif;}
+  h1,h2,h3{text-wrap:balance; margin:0;}
+  a{color:var(--accent);}
+  button{font-family:inherit;}
+
+  .wrap{max-width:920px; margin:0 auto; padding:0 18px 64px;}
+
+  /* Masthead */
+  header.mast{padding:28px 18px 18px; text-align:center;}
+  .wordmark{font-family:'Rye',cursive; font-size:clamp(2.1rem,7vw,3rem); color:var(--accent); letter-spacing:.5px; line-height:1;}
+  .tagline{margin-top:6px; color:var(--ink-soft); font-size:.95rem;}
+
+  /* Filter bar */
+  .filterbar{position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--rule); box-shadow:var(--shadow); padding:12px 18px;}
+  .filterbar-inner{max-width:920px; margin:0 auto;}
+  .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  .row + .row{margin-top:8px;}
+  .chip{border:1px solid var(--rule); background:var(--surface-2); color:var(--ink-soft); padding:5px 12px; border-radius:100px; font-size:.78rem; font-weight:600; letter-spacing:.02em; text-transform:uppercase; cursor:pointer; transition:background .12s, color .12s, border-color .12s;}
+  .chip:hover{background:var(--surface-3);}
+  .chip[aria-pressed="true"]{color:#fff; border-color:transparent;}
+  .chip[data-cat="cars"][aria-pressed="true"]{background:var(--cat-cars);}
+  .chip[data-cat="flea"][aria-pressed="true"]{background:var(--cat-flea);}
+  .chip[data-cat="vintage"][aria-pressed="true"]{background:var(--cat-vintage);}
+  .chip[data-cat="art"][aria-pressed="true"]{background:var(--cat-art);}
+  .chip[data-cat="sports"][aria-pressed="true"]{background:var(--cat-sports);}
+  .chip[data-cat="startup"][aria-pressed="true"]{background:var(--cat-startup);}
+  .chip[data-region][aria-pressed="true"]{background:var(--ink); color:var(--surface);}
+  :root[data-theme="dark"] .chip[data-region][aria-pressed="true"],
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .chip[data-region][aria-pressed="true"]{background:var(--ink); color:var(--ground);} }
+
+  .search-wrap{flex:1 1 200px; min-width:160px;}
+  #search{width:100%; padding:7px 12px; border-radius:8px; border:1px solid var(--rule); background:var(--surface-2); color:var(--ink); font-family:'Karla'; font-size:.88rem;}
+  #search::placeholder{color:var(--ink-faint);}
+
+  .star-toggle{margin-left:auto; display:flex; align-items:center; gap:6px; font-size:.8rem; color:var(--ink-soft); cursor:pointer; user-select:none;}
+  .star-toggle input{accent-color:var(--accent);}
+
+  /* Tabs */
+  .tabs{display:flex; gap:2px; margin-top:14px; border-bottom:1px solid var(--rule);}
+  .tab{flex:0 0 auto; padding:9px 16px; font-family:'IBM Plex Mono',monospace; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; margin-bottom:-1px;}
+  .tab[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--accent); font-weight:600;}
+  .panel{display:none; padding-top:20px;}
+  .panel.active{display:block;}
+
+  /* Calendar */
+  .cal-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .cal-nav button{background:var(--surface); border:1px solid var(--rule); color:var(--ink); width:34px; height:34px; border-radius:8px; font-size:1rem; cursor:pointer;}
+  .cal-nav button:hover{background:var(--surface-2);}
+  .cal-month{font-family:'Rye',cursive; font-size:1.4rem; color:var(--ink); letter-spacing:.3px;}
+  .cal-today-btn{font-family:'IBM Plex Mono'; font-size:.72rem; text-transform:uppercase; background:var(--surface); border:1px solid var(--rule); border-radius:6px; padding:4px 10px; cursor:pointer; color:var(--ink-soft);}
+
+  .weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px;}
+  .weekdays div{text-align:center; font-family:'IBM Plex Mono'; font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); padding:4px 0;}
+
+  .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .day{background:var(--surface); border:1px solid var(--rule); border-radius:8px; min-height:64px; padding:5px 5px 6px; cursor:default; display:flex; flex-direction:column; gap:3px; min-width:0; overflow:hidden;}
+  .day.empty{background:transparent; border-color:transparent;}
+  .day.has-events{cursor:pointer;}
+  .day.has-events:hover{background:var(--surface-2);}
+  .day.past{opacity:.5;}
+  .day.today{border-color:var(--accent); border-width:2px; padding:4px 4px 5px;}
+  .day.selected{outline:2px solid var(--accent); outline-offset:-2px;}
+  .daynum{font-family:'IBM Plex Mono'; font-size:.72rem; color:var(--ink-soft);}
+  .day.today .daynum{color:var(--accent); font-weight:700;}
+  .dot-row{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .dot{font-size:.6rem; font-family:'IBM Plex Mono'; padding:1px 4px; border-radius:3px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .dot.cars{background:var(--cat-cars);} .dot.flea{background:var(--cat-flea);} .dot.vintage{background:var(--cat-vintage);} .dot.art{background:var(--cat-art);} .dot.sports{background:var(--cat-sports);} .dot.startup{background:var(--cat-startup);}
+  .more{font-size:.62rem; color:var(--ink-faint); font-family:'IBM Plex Mono';}
+
+  .selected-day{margin-top:22px;}
+  .selected-day-label{font-family:'IBM Plex Mono'; font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); margin-bottom:10px;}
+  .empty-hint{color:var(--ink-faint); font-style:italic; font-size:.9rem; padding:18px 0;}
+
+  /* Agenda groups */
+  .group{margin-bottom:26px;}
+  .group-title{font-family:'IBM Plex Mono'; font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); border-bottom:1px solid var(--rule); padding-bottom:6px; margin-bottom:12px; display:flex; align-items:baseline; gap:8px;}
+  .group-title .count{color:var(--ink-soft); font-weight:600;}
+
+  .stack{display:flex; flex-direction:column; gap:10px;}
+
+  /* Event card */
+  .card{background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:14px 16px; box-shadow:var(--shadow);}
+  .card.interested{border-color:var(--accent);}
+  .card-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;}
+  .tag{font-family:'IBM Plex Mono'; font-size:.65rem; text-transform:uppercase; letter-spacing:.06em; padding:2px 7px; border-radius:4px; color:#fff; font-weight:600;}
+  .tag.cars{background:var(--cat-cars);} .tag.flea{background:var(--cat-flea);} .tag.vintage{background:var(--cat-vintage);} .tag.art{background:var(--cat-art);} .tag.sports{background:var(--cat-sports);} .tag.startup{background:var(--cat-startup);}
+  .badge-soon{font-family:'IBM Plex Mono'; font-size:.65rem; text-transform:uppercase; letter-spacing:.05em; background:var(--accent-soft); color:var(--accent-ink); padding:2px 7px; border-radius:4px; font-weight:700;}
+  .region-tag{font-size:.72rem; color:var(--ink-faint); font-family:'IBM Plex Mono'; margin-left:auto;}
+  .card h3{font-size:1.05rem; font-weight:700; margin-bottom:3px;}
+  .card .when{font-family:'IBM Plex Mono'; font-size:.78rem; color:var(--ink-soft); margin-bottom:2px;}
+  .card .venue{font-size:.78rem; color:var(--ink-faint); margin-bottom:8px;}
+  .card p.blurb{font-size:.88rem; line-height:1.5; color:var(--ink); margin:0 0 10px;}
+  .card-foot{display:flex; align-items:center; gap:14px; font-size:.78rem;}
+  .card-foot a{text-decoration:none; font-weight:600;}
+  .card-foot a:hover{text-decoration:underline;}
+  .drive{color:var(--ink-faint);}
+  .starbtn{margin-left:auto; background:none; border:none; cursor:pointer; font-size:1.05rem; color:var(--ink-faint); padding:2px;}
+  .starbtn.on{color:var(--accent);}
+
+  .subhead{font-family:'Rye',cursive; font-size:1.3rem; color:var(--ink); margin-bottom:4px;}
+  .subhead-note{font-size:.82rem; color:var(--ink-soft); margin-bottom:14px;}
+
+  footer{margin-top:40px; padding-top:18px; border-top:1px solid var(--rule); font-size:.8rem; color:var(--ink-faint); display:flex; flex-direction:column; gap:10px;}
+  footer .howto{background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:12px 14px; color:var(--ink-soft);}
+  footer .howto strong{color:var(--ink);}
+  .backup-row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .backup-row button{background:var(--surface); border:1px solid var(--rule); color:var(--ink-soft); border-radius:7px; padding:6px 12px; font-size:.78rem; cursor:pointer;}
+  .backup-row button:hover{background:var(--surface-2);}
+  #backupArea{display:none; margin-top:8px;}
+  #backupArea textarea{width:100%; min-height:70px; font-family:'IBM Plex Mono'; font-size:.72rem; background:var(--surface-2); color:var(--ink); border:1px solid var(--rule); border-radius:6px; padding:8px;}
+
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
+</style>
+
+<header class="mast">
+  <div class="wordmark">Haul Calendar</div>
+  <div class="tagline">Car shows, flea markets &amp; finds worth the drive — St. Joseph to the Cities</div>
+</header>
+
+<div class="filterbar">
+  <div class="filterbar-inner">
+    <div class="row" id="catRow"></div>
+    <div class="row" id="regionRow">
+      <div class="search-wrap"><input id="search" type="text" placeholder="Search events…"></div>
+      <label class="star-toggle"><input type="checkbox" id="interestedOnly"> Interested only</label>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" data-tab="calendar" role="tab" aria-selected="true">Calendar</button>
+    <button class="tab" data-tab="agenda" role="tab" aria-selected="false">Agenda</button>
+    <button class="tab" data-tab="always" role="tab" aria-selected="false">Always &amp; Upcoming</button>
+  </div>
+
+  <div class="panel active" id="panel-calendar">
+    <div class="cal-nav">
+      <button id="prevMonth" aria-label="Previous month">‹</button>
+      <div style="text-align:center;">
+        <div class="cal-month" id="calMonthLabel"></div>
+        <button class="cal-today-btn" id="todayBtn" style="margin-top:4px;">Today</button>
+      </div>
+      <button id="nextMonth" aria-label="Next month">›</button>
+    </div>
+    <div class="weekdays"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+    <div class="grid" id="calGrid"></div>
+
+    <div class="selected-day">
+      <div class="selected-day-label" id="selectedDayLabel">Tap a highlighted day to see what's happening</div>
+      <div class="stack" id="selectedDayStack"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-agenda">
+    <div id="agendaGroups"></div>
+  </div>
+
+  <div class="panel" id="panel-always">
+    <div>
+      <div class="subhead">Anytime — Go Whenever</div>
+      <div class="subhead-note">No calendar needed, just go when you're in the area.</div>
+      <div class="stack" id="anytimeStack"></div>
+    </div>
+    <div style="margin-top:30px;">
+      <div class="subhead">Watch List — Dates Not Announced Yet</div>
+      <div class="subhead-note">Keep an eye on these; check back closer to the date.</div>
+      <div class="stack" id="watchStack"></div>
+    </div>
+    <div style="margin-top:30px;">
+      <div class="subhead">On the Radar for 2027</div>
+      <div class="subhead-note">This year's edition already happened — same season, worth planning around next year.</div>
+      <div class="stack" id="nextyearStack"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="howto"><strong>Found something?</strong> Just tell me in chat, e.g. "add the Uptown craft market to my calendar," and I'll put it straight on your Google Calendar.</div>
+    <div class="backup-row">
+      <span>Your "Interested" picks are saved in this browser only.</span>
+      <button id="exportBtn">Copy my picks</button>
+      <button id="importBtn">Restore from text</button>
+    </div>
+    <div id="backupArea">
+      <textarea id="backupText" placeholder="Paste your copied picks here, then press Restore."></textarea>
+      <div class="backup-row" style="margin-top:6px;">
+        <button id="doImport">Restore</button>
+        <button id="closeBackup">Close</button>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CATS = [
+    {id:'cars', label:'Cars'},
+    {id:'flea', label:'Flea &amp; Antique'},
+    {id:'vintage', label:'Vintage &amp; Thrift'},
+    {id:'art', label:'Art &amp; Maker'},
+    {id:'sports', label:'Sports'},
+    {id:'startup', label:'Startup &amp; Biz'}
+  ];
+  var REGIONS = [
+    {id:'stcloud', label:'St. Cloud / St. Joseph (0-15 min)', shortLabel:'St. Cloud / St. Joseph'},
+    {id:'corridor', label:'On the Way (30-60 min)', shortLabel:'On the Way'},
+    {id:'twincities', label:'Twin Cities (20-40 min)', shortLabel:'Twin Cities'},
+    {id:'daytrip', label:'Day Trip (45-90+ min)', shortLabel:'Day Trip'}
+  ];
+
+  // ---- Event data (researched Sept 2026) ----
+  var EVENTS = [
+    {id:'elko', name:"Elko Traders' Market", category:'flea', region:'daytrip', bucket:'dated',
+      date:'2026-09-05', endDate:'2026-09-07', dateLabel:'Sat–Mon · Sep 5–7',
+      recurrence:'Also runs Memorial Day & July 4th weekends', drive:'~45-50 min day trip (south of the metro)',
+      venue:'10675 260th St E, Elko New Market, MN',
+      blurb:"300+ outdoor booths — one of the top-ranked flea markets in the country. Good one to make a full day of it.",
+      url:'https://tradersmarket.us/', source:'tradersmarket.us'},
+
+    {id:'tcstartupweek', name:'Twin Cities Startup Week', category:'startup', region:'twincities', bucket:'dated',
+      date:'2026-09-14', endDate:'2026-09-18', dateLabel:'Mon–Fri · Sep 14-18',
+      recurrence:null, drive:'~25-35 min from Minnetonka (events rotate)',
+      venue:'Events rotate across Minneapolis & St. Paul',
+      blurb:'Week-long founder/investor/student programming — 73 speakers across signature events like the Morning Meet n\' Greet, Great MN Give Back Hack, and a Regional Pitch Competition.',
+      url:'https://www.tcstartupweek.com/calendar', source:'tcstartupweek.com'},
+
+    {id:'mncup-finale', name:'MN Cup Grand Finale', category:'startup', region:'twincities', bucket:'dated',
+      date:'2026-09-14', dateLabel:'Mon · Sep 14, 4-7pm',
+      recurrence:'22nd annual', drive:'~25-30 min from Minnetonka',
+      venue:'McNamara Alumni Center, 200 Oak St SE, Minneapolis, MN',
+      blurb:"Minnesota's biggest startup competition — Finalist Showcase then pitches from all 9 divisional winners, $400k+ given away with no equity taken. Kicks off Startup Week.",
+      url:'https://www.eventbrite.com/e/2026-mn-cup-grand-finale-tickets-1990006182060', source:'carlsonschool.umn.edu'},
+
+    {id:'cec-conference', name:'Connecting Entrepreneurial Communities (CEC) Conference', category:'startup', region:'stcloud', bucket:'dated',
+      date:'2026-09-17', endDate:'2026-09-18', dateLabel:'Thu–Fri · Sep 17-18',
+      recurrence:"Minnesota's 7th annual", drive:'On campus',
+      venue:'Gorecki Center, College of Saint Benedict, 37 College Ave S, St. Joseph, MN',
+      blurb:'Plenary sessions at Gorecki, but breakout sessions happen directly inside downtown St. Joseph businesses — likely what people mean by the "St. Joe Crawl." You already have a volunteer shift booked here Sep 17, 3:15-5:45pm.',
+      url:'https://extension.umn.edu/event/2026-connecting-entrepreneurial-communities-conference', source:'extension.umn.edu'},
+
+    {id:'mncc-1', name:'MN Cars & Coffee (rotating lots)', category:'cars', region:'twincities', bucket:'dated',
+      date:'2026-09-19', dateLabel:'Sat · Sep 19 (check location)',
+      recurrence:'Select Saturdays, May–Oct — confirm lot weekly on mncandc.com', drive:'~20-30 min from Minnetonka',
+      venue:'Rotates — Canterbury Park (Shakopee), Southdale (Edina), or the Leamington Ramp (downtown Mpls)',
+      blurb:'One of the largest monthly car meets in the country — big variety of makes, rotates locations each time.',
+      url:'https://www.mncandc.com/', source:'mncandc.com'},
+
+    {id:'rosedale-1', name:'Cars and Coffee at Rosedale Center', category:'cars', region:'twincities', bucket:'dated',
+      date:'2026-09-12', dateLabel:'Sat · Sep 12, 8-11am',
+      recurrence:'Weekly, Saturdays through October', drive:'~30 min from Minnetonka',
+      venue:'Rosedale Center, 1221 Rosedale Center, Roseville, MN',
+      blurb:'Casual weekly meet in the mall lot — coffee and food nearby, easy repeat visit.',
+      url:'https://www.carsandcoffeedirectory.com/blog/cars-and-coffee-minneapolis-twin-cities-2026-guide', source:'carsandcoffeedirectory.com'},
+    {id:'rosedale-2', name:'Cars and Coffee at Rosedale Center', category:'cars', region:'twincities', bucket:'dated',
+      date:'2026-10-10', dateLabel:'Sat · Oct 10, 8-11am',
+      recurrence:'Weekly, Saturdays through October', drive:'~30 min from Minnetonka',
+      venue:'Rosedale Center, 1221 Rosedale Center, Roseville, MN',
+      blurb:'Casual weekly meet in the mall lot — coffee and food nearby, easy repeat visit.',
+      url:'https://www.carsandcoffeedirectory.com/blog/cars-and-coffee-minneapolis-twin-cities-2026-guide', source:'carsandcoffeedirectory.com'},
+
+    {id:'intermarque-1', name:'InterMarque Cars and Coffee', category:'cars', region:'twincities', bucket:'dated',
+      date:'2026-09-20', dateLabel:'Sun · Sep 20, 8-11am',
+      recurrence:'Every other Sunday, April–Nov', drive:'~30-35 min from Minnetonka',
+      venue:'1371 7th St W, St. Paul, MN',
+      blurb:'Import, scooter & motorcycle focus — a different flavor than the mostly-domestic meets.',
+      url:'https://intermarque.org/index.php/cars-and-coffee-st-paul/', source:'intermarque.org'},
+    {id:'intermarque-2', name:'InterMarque Cars and Coffee', category:'cars', region:'twincities', bucket:'dated',
+      date:'2026-10-18', dateLabel:'Sun · Oct 18, 8-11am',
+      recurrence:'Every other Sunday, April–Nov', drive:'~30-35 min from Minnetonka',
+      venue:'1371 7th St W, St. Paul, MN',
+      blurb:'Import, scooter & motorcycle focus — a different flavor than the mostly-domestic meets.',
+      url:'https://intermarque.org/index.php/cars-and-coffee-st-paul/', source:'intermarque.org'},
+
+    {id:'beaudreaus-cc', name:"Beaudreau's Cars & Coffee", category:'cars', region:'stcloud', bucket:'dated',
+      date:'2026-10-03', dateLabel:'Sat · Oct 3, 8am-noon',
+      recurrence:'1st Saturday monthly, May–Oct', drive:'~10-15 min from St. Joseph',
+      venue:"Beaudreau's Bar, 414 E St. Germain St, St. Cloud, MN",
+      blurb:'Local to school — bloody mary bar and a meat raffle at 2pm. Social, not just car-nerdy. (Two different St. Cloud cars-and-coffee meetups exist — this is the one at Beaudreau\'s, first Saturdays.)',
+      url:'https://www.getoutgarage.com/events/cars-and-coffee/MN/st-cloud/beaudreaus-cars-coffee-st-cloud-mn', source:'getoutgarage.com'},
+
+    {id:'stcloud-cc-1', name:'St. Cloud Cars and Coffee (Crossroads Center)', category:'cars', region:'stcloud', bucket:'dated',
+      date:'2026-09-26', dateLabel:'Sat · Sep 26, 8am-noon',
+      recurrence:'4th Saturday monthly, May–Oct', drive:'~10-15 min from St. Joseph',
+      venue:'Crossroads Center, St. Cloud, MN',
+      blurb:'The other St. Cloud cars-and-coffee — parking lot meet at the mall, fourth Saturdays.',
+      url:'https://visitstcloud.com/', source:'visitstcloud.com'},
+    {id:'stcloud-cc-2', name:'St. Cloud Cars and Coffee (Crossroads Center)', category:'cars', region:'stcloud', bucket:'dated',
+      date:'2026-10-24', dateLabel:'Sat · Oct 24, 8am-noon',
+      recurrence:'4th Saturday monthly, May–Oct', drive:'~10-15 min from St. Joseph',
+      venue:'Crossroads Center, St. Cloud, MN',
+      blurb:'The other St. Cloud cars-and-coffee — parking lot meet at the mall, fourth Saturdays.',
+      url:'https://visitstcloud.com/', source:'visitstcloud.com'},
+
+    {id:'firstfriday-cruise', name:'First Friday Cruise Night', category:'cars', region:'stcloud', bucket:'dated',
+      date:'2026-10-02', dateLabel:'Fri · Oct 2, evening',
+      recurrence:'First Friday monthly, May–Oct', drive:'~10-15 min from St. Joseph',
+      venue:'Cruises the streets of Waite Park & St. Cloud, MN',
+      blurb:'Old-school small-town cruise night — informal, low-key, exactly the kind of thing that never makes it onto a big events site.',
+      url:'https://www.facebook.com/FirstFridayCruiseWaitePark/', source:'facebook.com'},
+
+    {id:'stcloud-farmers-1', name:'St. Cloud Area Farmers Market', category:'art', region:'stcloud', bucket:'dated',
+      date:'2026-09-12', dateLabel:'Sat · Sep 12, 8am-noon',
+      recurrence:'Weekly, Saturdays through October', drive:'~10-15 min from St. Joseph',
+      venue:'Ladyslipper Lot, Downtown St. Cloud, MN',
+      blurb:"Not just produce — pottery, jewelry, and handmade crafts sit alongside the food stands.",
+      url:'https://www.stcloudareafarmersmarket.com/', source:'stcloudareafarmersmarket.com'},
+    {id:'stcloud-farmers-2', name:'St. Cloud Area Farmers Market', category:'art', region:'stcloud', bucket:'dated',
+      date:'2026-10-10', dateLabel:'Sat · Oct 10, 8am-noon',
+      recurrence:'Weekly, Saturdays through October', drive:'~10-15 min from St. Joseph',
+      venue:'Ladyslipper Lot, Downtown St. Cloud, MN',
+      blurb:"Not just produce — pottery, jewelry, and handmade crafts sit alongside the food stands.",
+      url:'https://www.stcloudareafarmersmarket.com/', source:'stcloudareafarmersmarket.com'},
+
+    {id:'festifall', name:'Downtown Festi-Fall', category:'cars', region:'stcloud', bucket:'dated',
+      date:'2026-09-20', dateLabel:'Sun · Sep 20, noon-5pm',
+      recurrence:null, drive:'~10-15 min from St. Joseph',
+      venue:'East St. Germain St, Downtown St. Cloud, MN',
+      blurb:'Classic car show plus a full vendor market of local makers and nonprofits — two categories in one afternoon, closest thing to school.',
+      url:'https://www.visitdowntownstc.com/festi-fall/', source:'visitdowntownstc.com'},
+
+    {id:'sartell-craft', name:'Sartell "Fall is in the Air" Vendor Craft Show', category:'art', region:'stcloud', bucket:'dated',
+      date:'2026-10-10', dateLabel:'Sat · Oct 10, 9am',
+      recurrence:null, drive:'~15-20 min from St. Joseph',
+      venue:'Sartell Community Center, 850 19th St S, Sartell, MN',
+      blurb:'Local vendor craft show just outside St. Cloud — handmade goods and seasonal decor.',
+      url:'https://www.sartellchamber.com/events', source:'sartellchamber.com'},
+
+    {id:'wayzata-carshow', name:'Wayzata Charity Car Show', category:'cars', region:'twincities', bucket:'dated',
+      date:'2026-09-19', dateLabel:'Sat · Sep 19, 10am-2pm (rain date Sep 26)',
+      recurrence:'5th annual', drive:'~10 min from Minnetonka',
+      venue:'Wayzata Community Church, 125 Wayzata Blvd E, Wayzata, MN',
+      blurb:'All makes/models/motorcycles, benefits local scholarships — practically walking distance from home.',
+      url:'https://carsandcoffeeevents.com/events/wayzata-charity-car-show-2026-09-19', source:'carsandcoffeeevents.com'},
+
+    {id:'chanhassen-caves', name:'Cars and Caves — Season Finale', category:'cars', region:'twincities', bucket:'dated',
+      date:'2026-09-26', dateLabel:'Sat · Sep 26, 9am-noon',
+      recurrence:'Final show of the 2026 season', drive:'~20 min from Minnetonka',
+      venue:'Chanhassen AutoPlex, 8150 Audubon Road, Chanhassen, MN',
+      blurb:'Monthly classic/collector car show — German-marque theme (Audi/BMW/Mercedes/Porsche/VW) for the finale, benefits St. Jude.',
+      url:'https://chanhassenautoplex.com/cars-and-caves/', source:'chanhassenautoplex.com'},
+
+    {id:'stillwater-flea', name:'Stillwater Flea & Crafter Market', category:'flea', region:'twincities', bucket:'dated',
+      date:'2026-09-26', endDate:'2026-09-27', dateLabel:'Sat–Sun · Sep 26-27, 9am-3pm',
+      recurrence:null, drive:'~40-45 min from Minnetonka',
+      venue:'Washington County Fairgrounds, 12300 40th St N, Stillwater, MN',
+      blurb:'~200 vendors — antiques, vintage, furniture, collectibles, garden art. East-metro option, opposite direction from school.',
+      url:'https://www.exploreminnesota.com/event/stillwater-flea-crafter-market/38040', source:'exploreminnesota.com'},
+
+    {id:'stillwater-craft', name:'Stillwater Fall Craft & Gift Show', category:'art', region:'twincities', bucket:'dated',
+      date:'2026-10-17', dateLabel:'Sat · Oct 17',
+      recurrence:null, drive:'~40-45 min from Minnetonka',
+      venue:'Stillwater Area High School, 5701 Stillwater Blvd N, Stillwater, MN',
+      blurb:'150 crafters/vendors — fall/Halloween/Christmas decor, jewelry, handcrafted gifts.',
+      url:'https://events.discoverstillwater.com/event/stillwater-fall-craft-gift-show-3/', source:'discoverstillwater.com'},
+
+    {id:'chanhassen-artisan', name:'Chanhassen Artisan Fair', category:'art', region:'twincities', bucket:'dated',
+      date:'2026-11-07', dateLabel:'Sat · Nov 7, 10am-2pm',
+      recurrence:null, drive:'~20 min from Minnetonka',
+      venue:'Chanhassen Recreation Center, 2310 Coulter Blvd, Chanhassen, MN',
+      blurb:'35+ artisans — woodcraft, pottery, jewelry, painting, photography. Free admission.',
+      url:'https://www.chanhassenmn.gov/departments/parks-recreation/community-events/artisan-fair', source:'chanhassenmn.gov'},
+
+    {id:'excelsior-christkindl', name:'Excelsior Christkindlsmarkt', category:'art', region:'twincities', bucket:'dated',
+      date:'2026-11-29', endDate:'2026-12-01', dateLabel:'Sun–Tue · Nov 29-Dec 1',
+      recurrence:null, drive:'~15 min from Minnetonka',
+      venue:'Downtown Excelsior, MN (lot behind East Water Street shops)',
+      blurb:'100+ vendor holiday market right in Excelsior — genuinely walking distance from home.',
+      url:'https://www.excelsiorchristmas.com/', source:'excelsiorchristmas.com'},
+
+    {id:'mnufc-1', name:'Minnesota United FC vs. FC Dallas', category:'sports', region:'twincities', bucket:'dated',
+      date:'2026-09-09', dateLabel:'Wed · Sep 9, 7:30pm',
+      recurrence:null, drive:'~30-35 min from Minnetonka',
+      venue:'Allianz Field, St. Paul, MN',
+      blurb:"Allianz Field has one of MLS's best supporter-section atmospheres — weeknight game.",
+      url:'https://www.mnufc.com/news/minnesota-united-announces-2026-major-league-soccer-schedule', source:'mnufc.com'},
+    {id:'mnufc-2', name:'Minnesota United FC vs. LA Galaxy', category:'sports', region:'twincities', bucket:'dated',
+      date:'2026-09-19', dateLabel:'Sat · Sep 19, 7:30pm',
+      recurrence:null, drive:'~30-35 min from Minnetonka',
+      venue:'Allianz Field, St. Paul, MN',
+      blurb:'Marquee opponent — LA Galaxy, on a Saturday night.',
+      url:'https://www.mnufc.com/news/minnesota-united-announces-2026-major-league-soccer-schedule', source:'mnufc.com'},
+    {id:'mnufc-3', name:'Minnesota United FC vs. Houston Dynamo FC', category:'sports', region:'twincities', bucket:'dated',
+      date:'2026-10-10', dateLabel:'Sat · Oct 10, 7:30pm',
+      recurrence:null, drive:'~30-35 min from Minnetonka',
+      venue:'Allianz Field, St. Paul, MN',
+      blurb:'Saturday night home game, late in the regular season.',
+      url:'https://www.mnufc.com/news/minnesota-united-announces-2026-major-league-soccer-schedule', source:'mnufc.com'},
+    {id:'mnufc-4', name:'Minnesota United FC vs. St. Louis CITY SC', category:'sports', region:'twincities', bucket:'dated',
+      date:'2026-10-17', dateLabel:'Sat · Oct 17, 3:30pm',
+      recurrence:null, drive:'~30-35 min from Minnetonka',
+      venue:'Allianz Field, St. Paul, MN',
+      blurb:'Final home date found in the regular-season schedule — playoffs likely follow.',
+      url:'https://www.mnufc.com/news/minnesota-united-announces-2026-major-league-soccer-schedule', source:'mnufc.com'},
+
+    {id:'classics-buffalo', name:'Classics by the Lake Car Show', category:'cars', region:'corridor', bucket:'dated',
+      date:'2026-09-12', dateLabel:'Sat · Sep 12',
+      recurrence:null, drive:'~50 min from Minnetonka, ~45 min from St. Joseph',
+      venue:'Sturges Park, 505 2nd Ave S, Buffalo, MN',
+      blurb:'Classic car show right on Buffalo Lake — genuinely on the way between school and home.',
+      url:'https://www.buffalochamber.org/event/classics-lake-car-show', source:'buffalochamber.org'},
+
+    {id:'hutchinson-arts', name:'Hutchinson Arts & Crafts Festival + Taste of Hutchinson', category:'art', region:'corridor', bucket:'dated',
+      date:'2026-09-18', endDate:'2026-09-19', dateLabel:'Fri–Sat · Sep 18-19',
+      recurrence:null, drive:'~55-60 min from Minnetonka',
+      venue:'Library Square Park, 12 Main St S, Hutchinson, MN',
+      blurb:'Big regional art/craft fair — 7,000+ attendees, food vendors line 1st Ave. Worth the trip on its own.',
+      url:'https://explorehutchinson.com/join-the-chamber/chamber-events-happenings/arts-and-crafts-festivaltaste-of-hutchinson/', source:'explorehutchinson.com'},
+
+    {id:'elkriver-makers', name:'Elk River Fall Makers Market', category:'art', region:'corridor', bucket:'dated',
+      date:'2026-10-03', dateLabel:'Sat · Oct 3',
+      recurrence:null, drive:'~35-40 min from Minnetonka',
+      venue:'1000 School Street, Elk River, MN',
+      blurb:'Indoor/outdoor maker market — handcrafted goods, an easy add-on toward the metro.',
+      url:'https://www.elkrivermn.gov/1792/Makers-Market-Vendors', source:'elkrivermn.gov'},
+
+    {id:'becker-autumn', name:'Becker Autumn Market', category:'art', region:'corridor', bucket:'dated',
+      date:'2026-10-10', dateLabel:'Sat · Oct 10, 10am-3pm',
+      recurrence:'2nd annual', drive:'~35 min from St. Joseph, ~45 min from Minnetonka',
+      venue:'Becker Community Center, 11500 Sherburne Ave, Becker, MN',
+      blurb:'Craft market almost exactly halfway between school and home.',
+      url:'https://mncraftcollective.com/products/october-2026-becker-autumn-market', source:'mncraftcollective.com'},
+
+    {id:'monticello-craft', name:'Monticello Fall Craft Show', category:'art', region:'corridor', bucket:'dated',
+      date:'2026-11-07', dateLabel:'Sat · Nov 7, 9am-3pm',
+      recurrence:null, drive:'~40 min from Minnetonka, ~30 min from St. Joseph',
+      venue:'Monticello Community Center, Monticello, MN',
+      blurb:'Craft vendor fair in a corridor town right off I-94.',
+      url:'https://www.monticellowomenoftoday.org/', source:'monticellowomenoftoday.org'},
+
+    {id:'maplelake-craft', name:'Maple Lake Fall Craft & Vendor Show', category:'art', region:'corridor', bucket:'dated',
+      date:'2026-11-14', dateLabel:'Sat · Nov 14, 9am-1pm',
+      recurrence:null, drive:'~45 min from Minnetonka, ~30 min from St. Joseph',
+      venue:'Maple Lake Elementary School, Maple Lake, MN',
+      blurb:'Small-town craft show, easy stop on a corridor drive.',
+      url:'https://www.maplelakechamber.com/events', source:'maplelakechamber.com'},
+
+    {id:'stma-craft', name:'St. Michael-Albertville Women of Today Fall Craft Show', category:'art', region:'corridor', bucket:'dated',
+      date:'2026-11-21', dateLabel:'Sat · Nov 21, 9am-4pm',
+      recurrence:null, drive:'~35 min from Minnetonka',
+      venue:'St. Michael-Albertville High School, 5800 Jamison Ave NE, St. Michael, MN',
+      blurb:'250+ vendors — one of the bigger craft shows on the corridor side.',
+      url:'https://discoverstma.com/listing/st-michael-albertville-women-of-today-fall-craft-show/', source:'discoverstma.com'},
+
+    {id:'northstar-1', name:'North Star Flea Market', category:'flea', region:'twincities', bucket:'dated',
+      date:'2026-09-13', dateLabel:'Sun · Sep 13, 5-9:30pm',
+      recurrence:'Every Sunday', drive:'~30 min from Minnetonka',
+      venue:'International Bazaar Bldg, MN State Fairgrounds, Falcon Heights, MN',
+      blurb:'Community flea market in the State Fairgrounds International Bazaar building — local vendors and collectibles.',
+      url:'https://northstarfleamarket.com/', source:'northstarfleamarket.com'},
+    {id:'northstar-2', name:'North Star Flea Market', category:'flea', region:'twincities', bucket:'dated',
+      date:'2026-10-11', dateLabel:'Sun · Oct 11, 5-9:30pm',
+      recurrence:'Every Sunday', drive:'~30 min from Minnetonka',
+      venue:'International Bazaar Bldg, MN State Fairgrounds, Falcon Heights, MN',
+      blurb:'Community flea market in the State Fairgrounds International Bazaar building — local vendors and collectibles.',
+      url:'https://northstarfleamarket.com/', source:'northstarfleamarket.com'},
+
+    {id:'tcvintage', name:'Twin Cities Vintage Flea @ 56 Brewing', category:'vintage', region:'twincities', bucket:'dated',
+      date:'2026-09-27', dateLabel:'Sun · Sep 27, noon-5pm',
+      recurrence:null, drive:'~25-30 min from Minnetonka',
+      venue:'56 Brewing, 3055 NE Columbia Ave, Minneapolis, MN',
+      blurb:'Vintage clothing & collectibles market at a Northeast Minneapolis brewery — food and drinks on site.',
+      url:'https://56brewing.com/event/twin-cities-vintage-flea/2026-09-27/', source:'56brewing.com'},
+
+    {id:'mplsvintage', name:'Minneapolis Vintage Market @ Sociable Cider Werks', category:'vintage', region:'twincities', bucket:'dated',
+      date:'2026-09-13', dateLabel:'Sun · Sep 13',
+      recurrence:null, drive:'~25-30 min from Minnetonka',
+      venue:'Sociable Cider Werks, 1500 Fillmore St NE, Minneapolis, MN',
+      blurb:'250+ rotating vintage vendors at a Northeast cidery — pairs well with a lazy Sunday.',
+      url:'https://www.mplsvintagemarket.com/eventsfeed', source:'mplsvintagemarket.com'},
+
+    {id:'renfest-1', name:'MN Renaissance Festival — Artisan Marketplace', category:'art', region:'twincities', bucket:'dated',
+      date:'2026-09-12', endDate:'2026-09-13', dateLabel:'Sat–Sun · Sep 12-13',
+      recurrence:'Weekends, Aug 22–Oct 4', drive:'~35-40 min from Minnetonka',
+      venue:'12364 Chestnut Blvd, Shakopee, MN',
+      blurb:'250+ artisans doing live demos — glassblowing, bronze casting, leatherwork — inside the festival grounds.',
+      url:'https://renaissancefest.com/artisan-marketplace/', source:'renaissancefest.com'},
+    {id:'renfest-2', name:'MN Renaissance Festival — Artisan Marketplace', category:'art', region:'twincities', bucket:'dated',
+      date:'2026-09-19', endDate:'2026-09-20', dateLabel:'Sat–Sun · Sep 19-20',
+      recurrence:'Weekends, Aug 22–Oct 4', drive:'~35-40 min from Minnetonka',
+      venue:'12364 Chestnut Blvd, Shakopee, MN',
+      blurb:'250+ artisans doing live demos — glassblowing, bronze casting, leatherwork — inside the festival grounds.',
+      url:'https://renaissancefest.com/artisan-marketplace/', source:'renaissancefest.com'},
+    {id:'renfest-3', name:'MN Renaissance Festival — Artisan Marketplace', category:'art', region:'twincities', bucket:'dated',
+      date:'2026-09-26', endDate:'2026-09-27', dateLabel:'Sat–Sun · Sep 26-27',
+      recurrence:'Weekends, Aug 22–Oct 4', drive:'~35-40 min from Minnetonka',
+      venue:'12364 Chestnut Blvd, Shakopee, MN',
+      blurb:'250+ artisans doing live demos — glassblowing, bronze casting, leatherwork — inside the festival grounds.',
+      url:'https://renaissancefest.com/artisan-marketplace/', source:'renaissancefest.com'},
+    {id:'renfest-4', name:'MN Renaissance Festival — Final Weekend (Artisan Marketplace)', category:'art', region:'twincities', bucket:'dated',
+      date:'2026-10-03', endDate:'2026-10-04', dateLabel:'Sat–Sun · Oct 3-4',
+      recurrence:'Last weekend of the season', drive:'~35-40 min from Minnetonka',
+      venue:'12364 Chestnut Blvd, Shakopee, MN',
+      blurb:'Closing weekend — same artisan marketplace, last chance for the year.',
+      url:'https://renaissancefest.com/artisan-marketplace/', source:'renaissancefest.com'},
+
+    {id:'roadster-swap', name:'Twin Cities Roadster Swap Meet', category:'cars', region:'twincities', bucket:'dated',
+      date:'2026-10-04', dateLabel:'Sun · Oct 4, gates 6am',
+      recurrence:'55th annual', drive:'~30 min from Minnetonka',
+      venue:'MN State Fairgrounds, 1265 Snelling Ave N, Falcon Heights, MN',
+      blurb:'Old-school parts swap meet at the State Fairgrounds — great for vintage/restoration parts hunting.',
+      url:'https://twincitiesroadsters.com/swap-meet', source:'twincitiesroadsters.com'},
+
+    {id:'vikings-gb', name:'Vikings vs. Green Bay Packers', category:'sports', region:'twincities', bucket:'dated',
+      date:'2026-09-13', dateLabel:'Sun · Sep 13',
+      recurrence:null, drive:'~30 min from Minnetonka',
+      venue:'U.S. Bank Stadium, 401 Chicago Ave, Minneapolis, MN',
+      blurb:'Rivalry game, prime early-season atmosphere at U.S. Bank Stadium.',
+      url:'https://www.vikings.com/news/2026-schedule-opponents-minnesota-nfl', source:'vikings.com'},
+
+    {id:'wild-opener', name:'Minnesota Wild Home Opener vs. Boston Bruins', category:'sports', region:'twincities', bucket:'dated',
+      date:'2026-10-03', dateLabel:'Sat · Oct 3',
+      recurrence:null, drive:'~30-35 min from Minnetonka',
+      venue:'Xcel Energy Center, 199 W Kellogg Blvd, St. Paul, MN',
+      blurb:'Home-opener atmosphere at Xcel Energy Center — full "State of Hockey" pageantry.',
+      url:'https://www.kttc.com/2026/07/16/minnesota-wild-release-schedule-2026-27-regular-season/', source:'kttc.com'},
+
+    {id:'sju-bethel', name:"Saint John's Football vs. Bethel — Family Weekend", category:'sports', region:'stcloud', bucket:'dated',
+      date:'2026-10-03', dateLabel:'Sat · Oct 3',
+      recurrence:null, drive:'On campus',
+      venue:'Clemens Stadium, Collegeville, MN',
+      blurb:'Family Weekend draws a bigger crowd than a typical MIAC game.',
+      url:'https://gojohnnies.com/news/2026/2/9/sju-football-to-face-uw-la-crosse-in-2026-2028.aspx', source:'gojohnnies.com'},
+    {id:'sju-concordia', name:"Saint John's Football vs. Concordia — Homecoming", category:'sports', region:'stcloud', bucket:'dated',
+      date:'2026-10-17', dateLabel:'Sat · Oct 17',
+      recurrence:null, drive:'On campus',
+      venue:'Clemens Stadium, Collegeville, MN',
+      blurb:'Homecoming atmosphere, D-III rivalry, zero drive required.',
+      url:'https://gojohnnies.com/news/2026/2/9/sju-football-to-face-uw-la-crosse-in-2026-2028.aspx', source:'gojohnnies.com'},
+    {id:'sju-gustavus', name:"Saint John's Football vs. Gustavus — final home game", category:'sports', region:'stcloud', bucket:'dated',
+      date:'2026-10-31', dateLabel:'Sat · Oct 31',
+      recurrence:null, drive:'On campus',
+      venue:'Clemens Stadium, Collegeville, MN',
+      blurb:'Final home game, plus Halloween-weekend novelty.',
+      url:'https://gojohnnies.com/news/2026/2/9/sju-football-to-face-uw-la-crosse-in-2026-2028.aspx', source:'gojohnnies.com'},
+
+    {id:'gophers-nw', name:'Gophers Football vs. Northwestern — Senior Day', category:'sports', region:'twincities', bucket:'dated',
+      date:'2026-11-21', dateLabel:'Sat · Nov 21',
+      recurrence:null, drive:'~30 min from Minnetonka',
+      venue:'Huntington Bank Stadium, 420 SE 23rd Ave, Minneapolis, MN',
+      blurb:'Final home game of the season, senior-day sendoff energy.',
+      url:'https://gophersports.com/news/2026/1/27/football-big-ten-announces-minnesotas-2026-schedule', source:'gophersports.com'},
+
+    {id:'stcloud-craft-fall', name:'St. Cloud Fall Craft & Vendor Market', category:'art', region:'stcloud', bucket:'dated',
+      date:'2026-11-13', endDate:'2026-11-15', dateLabel:'Fri–Sun · Nov 13-15',
+      recurrence:null, drive:'~10-15 min from St. Joseph',
+      venue:'Crossroads Center, St. Cloud, MN',
+      blurb:'100+ vendors — handcrafted goods, jewelry, woodworking. Closest option to school, good holiday shopping.',
+      url:'https://www.thecraftmap.com/fair/holiday-craft-and-gift-show-4th-st-cloud-mn', source:'thecraftmap.com'},
+
+    {id:'landmark', name:'Landmark Center Holiday Bazaar', category:'art', region:'twincities', bucket:'dated',
+      date:'2026-12-04', endDate:'2026-12-06', dateLabel:'Fri–Sun · Dec 4-6',
+      recurrence:'48th annual', drive:'~30-35 min from Minnetonka',
+      venue:'Landmark Center, 75 5th St W, St. Paul, MN',
+      blurb:'Juried holiday market in a historic downtown St. Paul courthouse — apparel, ceramics, jewelry.',
+      url:'https://www.landmarkcenter.org/holiday-bazaar/', source:'landmarkcenter.org'},
+
+    {id:'julmarknad', name:'Julmarknad (Swedish Holiday Market)', category:'art', region:'twincities', bucket:'dated',
+      date:'2026-12-04', endDate:'2026-12-06', dateLabel:'Fri–Sun · Dec 4-6',
+      recurrence:null, drive:'~25 min from Minnetonka',
+      venue:'American Swedish Institute, 2600 Park Ave, Minneapolis, MN',
+      blurb:'Swedish handcraft market inside the American Swedish Institute mansion — unique, festive vibe.',
+      url:'https://asimn.org/experience/festivals/julmarknad/', source:'asimn.org'}
+  ];
+
+  var ANYTIME = [
+    {id:'hopkins', name:'Hopkins Antique Mall', category:'flea', region:'twincities',
+      note:'Open year-round · daily 11am-5pm', drive:'~10 min from Minnetonka',
+      venue:'1008 Mainstreet, Hopkins, MN',
+      blurb:'68 dealers under one roof — the closest reliable antique stop to home. Call ahead about pop-up sales.',
+      url:'https://www.hopkinsantiquemall.com/', source:'hopkinsantiquemall.com'},
+    {id:'stcloud-flea', name:'St. Cloud Flea Market', category:'flea', region:'stcloud',
+      note:'Open year-round, indoor', drive:'~10-15 min from St. Joseph',
+      venue:'3807 West St. Germain St, St. Cloud, MN',
+      blurb:'40+ vendors — vintage, antiques, records. The closest year-round flea market to school.',
+      url:'https://www.yelp.com/biz/saint-cloud-flea-market-st-cloud', source:'yelp.com'},
+    {id:'rustypick', name:'The Rusty Pick', category:'flea', region:'stcloud',
+      note:'Open year-round · two locations', drive:'~10-15 min from St. Joseph',
+      venue:'311 28th Ave S, Waite Park, MN & 707 W St. Germain St, St. Cloud, MN',
+      blurb:'Antique/vintage decor shop, two St. Cloud-area locations — worth a browse anytime.',
+      url:'https://therustypickjunk.com/', source:'therustypickjunk.com'}
+  ];
+
+  var WATCH = [
+    {id:'vikings-det', name:'Vikings vs. Detroit Lions', category:'sports', region:'twincities',
+      note:'Week 15, mid-December 2026 · prime-time, exact date TBD', drive:'~30 min from Minnetonka',
+      venue:'U.S. Bank Stadium, Minneapolis, MN',
+      blurb:'Late-season, likely playoff-implications atmosphere under the lights.',
+      url:'https://www.cbssports.com/nfl/teams/min/minnesota-vikings/schedule/', source:'cbssports.com'},
+    {id:'downtown-monthly', name:'Downtown Monthly Market', category:'art', region:'stcloud',
+      note:'Last Wednesday monthly, May–Oct (evening) · exact address unconfirmed', drive:'~10-15 min from St. Joseph',
+      venue:'Historic Downtown St. Cloud, MN — check @downtownmonthlymarket for the exact spot',
+      blurb:'Local makers, food trucks, extended shop hours downtown — real and recurring, just couldn\'t pin an exact address.',
+      url:'https://www.downtownsaintcloud.org/', source:'downtownsaintcloud.org'},
+    {id:'aw-cruise-buffalo', name:'A&W Cruise Night', category:'cars', region:'corridor',
+      note:'Only Aug 19, 2026 confirmed · may recur monthly through summer, unconfirmed', drive:'~50 min from Minnetonka',
+      venue:'A&W Restaurant, 140 Orr Ave, Buffalo, MN',
+      blurb:'Informal small-town cruise night — check the city of Buffalo\'s listings for a fall date.',
+      url:'https://www.buffalochamber.org/', source:'buffalochamber.org'},
+    {id:'watertown-market', name:'Watertown Farm and Craft Market', category:'art', region:'corridor',
+      note:'Seasonal (likely May–Sept/Oct) · fall schedule unconfirmed', drive:'~50 min from Minnetonka',
+      venue:'300 Lewis Avenue N, Watertown, MN',
+      blurb:'Farmers market that also carries craft vendors — confirm it\'s still running before making the drive.',
+      url:'https://nfmd.org/mn/watertown/1003646/', source:'nfmd.org'},
+    {id:'rogers-vendor', name:'Rogers Vendor Market', category:'art', region:'corridor',
+      note:'2026 confirmed date so far is a March market · fall 2026 date not confirmed, may have shifted to spring-only', drive:'~40 min from Minnetonka',
+      venue:'Rogers High School, Rogers, MN',
+      blurb:'Ran in fall 2025 but 2026\'s only confirmed sitting is spring (March) — worth checking, but don\'t count on a fall date.',
+      url:'https://www.rogersmn.gov/', source:'rogersmn.gov'}
+  ];
+
+  var NEXTYEAR = [
+    {id:'msra', name:"MSRA Back to the 50's Weekend", category:'cars', region:'twincities', note:'Typically June 19-21 → June 2027', venue:'MN State Fairgrounds, Falcon Heights, MN', url:'https://msrabacktothe50s.com/', source:'msrabacktothe50s.com', blurb:'11,000+ pre-1965 street rods and customs at the State Fairgrounds — swap meet, live music, huge atmosphere.'},
+    {id:'uptown-art', name:'Uptown Art Fair', category:'art', region:'twincities', note:'Typically 1st full weekend of August → Aug 2027', venue:'Lake of the Isles Pkwy, Uptown Minneapolis, MN', url:'https://www.uptownminneapolis.com/uptown-art-fair-2026/', source:'uptownminneapolis.com', blurb:'One of the biggest juried art fairs in the Midwest — ~350 artists, big neighborhood atmosphere.'},
+    {id:'stonearch', name:'Stone Arch Bridge Festival', category:'art', region:'twincities', note:"Typically Father's Day weekend → June 2027", venue:'West River Pkwy, Minneapolis riverfront, MN', url:'https://stonearchbridgefestival.com/2026-festival-at-a-glance/', source:'stonearchbridgefestival.com', blurb:'200+ artists along the historic bridge, music, food market — great full-day event.'},
+    {id:'totallyrad', name:'Totally Rad Vintage Fest', category:'vintage', region:'twincities', note:'Typically late January → Jan 2027', venue:'Minneapolis Convention Center, MN', url:'https://www.minneapolis.org/minneapolis-convention-center/vintage-fest/', source:'minneapolis.org', blurb:'Large indoor vintage clothing and collectibles fest — good winter option.'},
+    {id:'autoshow', name:'Twin Cities Auto Show', category:'cars', region:'twincities', note:'Typically early January → Jan 2027', venue:'Minneapolis Convention Center, MN', url:'https://twincitiesautoshow.com/', source:'twincitiesautoshow.com', blurb:'New-model showcase indoors — a good winter fallback when outdoor meets are dead.'},
+    {id:'oronoco', name:'Oronoco Antiques and Flea Market', category:'flea', region:'daytrip', note:'3rd weekend of August → Aug 2027', venue:'Downtown Oronoco, MN (near Rochester)', url:'https://mspmag.com/home-and-design/vintage-flea-markets-shopping-homewares-decor-furniture-mn/', source:'mspmag.com', blurb:'300+ booth outdoor antiques market near Rochester — 50+ year tradition, small-town charm.'},
+    {id:'alexandria', name:'Alexandria Retro Market', category:'vintage', region:'daytrip', note:'Typically late July → July 2027', venue:'Alexandria, MN', url:'https://www.thecraftmap.com/fairs/minnesota', source:'thecraftmap.com', blurb:'Well-regarded regional retro/vintage market outside the metro — bigger day-trip.'},
+    {id:'stcloud-spring', name:'St. Cloud Spring Craft & Vendor Market', category:'art', region:'stcloud', note:'Typically mid-May → May 2027', venue:'Crossroads Center, St. Cloud, MN', url:'https://www.eventbrite.com/e/st-cloud-fall-craft-vendor-market-tickets-1991896227236', source:'eventbrite.com', blurb:'Spring counterpart to the fall market at Crossroads — good option once back on campus.'},
+    {id:'mplscraft', name:'Minneapolis Craft Market', category:'art', region:'twincities', note:'Rotates through the year — check site for next date', venue:'Rotates — e.g. The Machine Shop, Minneapolis, MN', url:'https://www.mplscraftmarket.com/', source:'mplscraftmarket.com', blurb:'Rotating indie designer/maker market — moves venues seasonally, worth checking periodically.'},
+    {id:'urbanflea', name:'Urban Flea Market (Faribault)', category:'flea', region:'daytrip', note:'Select dates, June-July → summer 2027', venue:'Faribault, MN', url:'https://www.minnesotaparent.com/calendar/urban-flea-market-is-back-free-event-shopping-food-music/', source:'minnesotaparent.com', blurb:'Free recurring community market — good if timed with a Faribault day trip.'},
+    {id:'saukcentre-arts', name:'Sauk Centre Festival of the Arts', category:'art', region:'stcloud', note:'Typically late August (Aug 29-30 in 2026) → Aug 2027', venue:'Sinclair Lewis Park, Sauk Centre, MN', url:'https://www.sc-festival-arts.org/', source:'sc-festival-arts.org', blurb:'Regional art fair close to school — pottery, jewelry, stained glass, woodwork. Just missed this year\'s window.'}
+  ];
+
+  // ---- State ----
+  var state = {
+    cats: new Set(CATS.map(function(c){return c.id;})),
+    regions: new Set(REGIONS.map(function(r){return r.id;})),
+    search: '',
+    interestedOnly: false,
+    calYear: null, calMonth: null,
+    selectedDate: null,
+    interested: loadInterested()
+  };
+
+  function todayMidnight(){ var d=new Date(); d.setHours(0,0,0,0); return d; }
+  var TODAY = todayMidnight();
+  state.calYear = TODAY.getFullYear();
+  state.calMonth = TODAY.getMonth();
+
+  function parseISO(s){ var p=s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function isoOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function daysBetween(a,b){ return Math.round((b-a)/86400000); }
+
+  function loadInterested(){
+    try{ var raw=localStorage.getItem('haulcal_interested'); return raw? new Set(JSON.parse(raw)) : new Set(); }
+    catch(e){ return new Set(); }
+  }
+  function saveInterested(){
+    try{ localStorage.setItem('haulcal_interested', JSON.stringify(Array.from(state.interested))); }catch(e){}
+  }
+
+  // ---- Filtering ----
+  function passesFilters(ev){
+    if(!state.cats.has(ev.category)) return false;
+    if(!state.regions.has(ev.region)) return false;
+    if(state.interestedOnly && !state.interested.has(ev.id)) return false;
+    if(state.search){
+      var s = state.search.toLowerCase();
+      var hay = (ev.name+' '+ev.blurb).toLowerCase();
+      if(hay.indexOf(s)===-1) return false;
+    }
+    return true;
+  }
+
+  // ---- Rendering: filter chips ----
+  var catRow = document.getElementById('catRow');
+  CATS.forEach(function(c){
+    var b = document.createElement('button');
+    b.className='chip'; b.dataset.cat=c.id; b.setAttribute('aria-pressed','true');
+    b.innerHTML=c.label;
+    b.addEventListener('click', function(){
+      if(state.cats.has(c.id) && state.cats.size===1){ /* keep at least one */ }
+      if(state.cats.has(c.id)) state.cats.delete(c.id); else state.cats.add(c.id);
+      b.setAttribute('aria-pressed', state.cats.has(c.id));
+      renderAll();
+    });
+    catRow.appendChild(b);
+  });
+
+  var regionRow = document.getElementById('regionRow');
+  var searchBox = document.getElementById('search');
+  REGIONS.forEach(function(r){
+    var b = document.createElement('button');
+    b.className='chip'; b.dataset.region=r.id; b.setAttribute('aria-pressed','true');
+    b.textContent=r.label;
+    b.addEventListener('click', function(){
+      if(state.regions.has(r.id)) state.regions.delete(r.id); else state.regions.add(r.id);
+      b.setAttribute('aria-pressed', state.regions.has(r.id));
+      renderAll();
+    });
+    regionRow.insertBefore(b, regionRow.firstChild);
+  });
+
+  searchBox.addEventListener('input', function(){ state.search = searchBox.value; renderAll(); });
+  document.getElementById('interestedOnly').addEventListener('change', function(e){ state.interestedOnly = e.target.checked; renderAll(); });
+
+  // ---- Tabs ----
+  var tabs = document.querySelectorAll('.tab');
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){
+      tabs.forEach(function(x){ x.setAttribute('aria-selected', x===t); });
+      document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+      document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---- Card rendering ----
+  function urgencyBadge(ev){
+    var start = parseISO(ev.date);
+    var end = ev.endDate ? parseISO(ev.endDate) : start;
+    if(TODAY >= start && TODAY <= end) return 'Happening now';
+    var d = daysBetween(TODAY, start);
+    if(d===0) return 'Today';
+    if(d===1) return 'Tomorrow';
+    if(d>1 && d<=7) return 'This week';
+    return null;
+  }
+
+  function renderCard(ev, opts){
+    opts = opts || {};
+    var div = document.createElement('div');
+    div.className = 'card' + (state.interested.has(ev.id) ? ' interested' : '');
+    var catLabel = CATS.filter(function(c){return c.id===ev.category;})[0].label.replace('&amp;','&');
+    var regionLabel = REGIONS.filter(function(r){return r.id===ev.region;})[0].shortLabel;
+
+    var badge = opts.dated ? urgencyBadge(ev) : null;
+
+    var whenLine = opts.dated ? ev.dateLabel : (ev.note || '');
+    var recurLine = ev.recurrence ? '<div class="when" style="margin-top:-4px;color:var(--ink-faint);font-size:.74rem;">'+ev.recurrence+'</div>' : '';
+
+    div.innerHTML =
+      '<div class="card-top">'+
+        '<span class="tag '+ev.category+'">'+catLabel+'</span>'+
+        (badge ? '<span class="badge-soon">'+badge+'</span>' : '')+
+        '<span class="region-tag">'+regionLabel+'</span>'+
+      '</div>'+
+      '<h3>'+ev.name+'</h3>'+
+      '<div class="when">'+whenLine+'</div>'+
+      recurLine+
+      (ev.venue ? '<div class="venue">'+ev.venue+'</div>' : '')+
+      '<p class="blurb">'+ev.blurb+'</p>'+
+      '<div class="card-foot">'+
+        '<span class="drive">'+ev.drive+'</span>'+
+        '<a href="'+ev.url+'" target="_blank" rel="noopener">View listing (' + ev.source + ') ↗</a>'+
+        '<button class="starbtn'+(state.interested.has(ev.id)?' on':'')+'" data-id="'+ev.id+'" aria-label="Mark interested">'+(state.interested.has(ev.id)?'★':'☆')+'</button>'+
+      '</div>';
+
+    var star = div.querySelector('.starbtn');
+    star.addEventListener('click', function(){
+      if(state.interested.has(ev.id)){ state.interested.delete(ev.id); star.classList.remove('on'); star.textContent='☆'; div.classList.remove('interested'); }
+      else{ state.interested.add(ev.id); star.classList.add('on'); star.textContent='★'; div.classList.add('interested'); }
+      saveInterested();
+      if(state.interestedOnly) renderAll();
+    });
+
+    return div;
+  }
+
+  // ---- Calendar tab ----
+  var MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  function eventsByDate(){
+    var map = {};
+    EVENTS.filter(passesFilters).forEach(function(ev){
+      var start = parseISO(ev.date);
+      var end = ev.endDate ? parseISO(ev.endDate) : start;
+      var cur = new Date(start);
+      while(cur <= end){
+        var key = isoOf(cur);
+        (map[key] = map[key] || []).push(ev);
+        cur.setDate(cur.getDate()+1);
+      }
+    });
+    return map;
+  }
+
+  function renderCalendar(){
+    document.getElementById('calMonthLabel').textContent = MONTH_NAMES[state.calMonth] + ' ' + state.calYear;
+    var grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+    var firstOfMonth = new Date(state.calYear, state.calMonth, 1);
+    var startPad = firstOfMonth.getDay();
+    var daysInMonth = new Date(state.calYear, state.calMonth+1, 0).getDate();
+    var map = eventsByDate();
+
+    for(var i=0;i<startPad;i++){
+      var pad = document.createElement('div'); pad.className='day empty'; grid.appendChild(pad);
+    }
+    for(var d=1; d<=daysInMonth; d++){
+      var cellDate = new Date(state.calYear, state.calMonth, d);
+      var key = isoOf(cellDate);
+      var evs = map[key] || [];
+      var cell = document.createElement('div');
+      cell.className = 'day' + (evs.length? ' has-events':'') + (cellDate < TODAY ? ' past':'') + (+cellDate === +TODAY ? ' today':'') + (state.selectedDate===key ? ' selected':'');
+      var dotsHtml = evs.slice(0,3).map(function(ev){ return '<div class="dot '+ev.category+'">'+ev.name+'</div>'; }).join('');
+      var moreHtml = evs.length>3 ? '<div class="more">+'+(evs.length-3)+' more</div>' : '';
+      cell.innerHTML = '<div class="daynum">'+d+'</div><div class="dot-row">'+dotsHtml+moreHtml+'</div>';
+      if(evs.length){
+        cell.addEventListener('click', function(k){ return function(){ state.selectedDate = k; renderCalendar(); renderSelectedDay(); }; }(key));
+      }
+      grid.appendChild(cell);
+    }
+    renderSelectedDay();
+  }
+
+  function renderSelectedDay(){
+    var label = document.getElementById('selectedDayLabel');
+    var stack = document.getElementById('selectedDayStack');
+    stack.innerHTML = '';
+    if(!state.selectedDate){
+      label.textContent = "Tap a highlighted day to see what's happening";
+      return;
+    }
+    var map = eventsByDate();
+    var evs = map[state.selectedDate] || [];
+    var d = parseISO(state.selectedDate);
+    label.textContent = d.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'});
+    if(!evs.length){ stack.innerHTML = '<div class="empty-hint">Nothing here after filters — try widening your filters above.</div>'; return; }
+    evs.forEach(function(ev){ stack.appendChild(renderCard(ev, {dated:true})); });
+  }
+
+  document.getElementById('prevMonth').addEventListener('click', function(){
+    state.calMonth--; if(state.calMonth<0){ state.calMonth=11; state.calYear--; }
+    renderCalendar();
+  });
+  document.getElementById('nextMonth').addEventListener('click', function(){
+    state.calMonth++; if(state.calMonth>11){ state.calMonth=0; state.calYear++; }
+    renderCalendar();
+  });
+  document.getElementById('todayBtn').addEventListener('click', function(){
+    state.calYear = TODAY.getFullYear(); state.calMonth = TODAY.getMonth(); state.selectedDate = isoOf(TODAY);
+    renderCalendar();
+  });
+
+  // ---- Agenda tab ----
+  function renderAgenda(){
+    var container = document.getElementById('agendaGroups');
+    container.innerHTML = '';
+    var filtered = EVENTS.filter(passesFilters);
+
+    var groups = {happening:[], today:[], week:[], month:[], nextmonth:[], later:[]};
+    filtered.forEach(function(ev){
+      var start = parseISO(ev.date);
+      var end = ev.endDate ? parseISO(ev.endDate) : start;
+      if(TODAY>=start && TODAY<=end){ groups.happening.push(ev); return; }
+      if(start < TODAY) return; // past, skip in agenda
+      var d = daysBetween(TODAY, start);
+      if(d===0){ groups.today.push(ev); return; }
+      if(d<=7){ groups.week.push(ev); return; }
+      if(start.getMonth()===TODAY.getMonth() && start.getFullYear()===TODAY.getFullYear()){ groups.month.push(ev); return; }
+      var nm = new Date(TODAY.getFullYear(), TODAY.getMonth()+1, 1);
+      if(start.getMonth()===nm.getMonth() && start.getFullYear()===nm.getFullYear()){ groups.nextmonth.push(ev); return; }
+      groups.later.push(ev);
+    });
+
+    var order = [
+      ['happening','Happening Now'],
+      ['today','Today'],
+      ['week','This Week'],
+      ['month','Later This Month'],
+      ['nextmonth','Next Month'],
+      ['later','Further Out']
+    ];
+    var any = false;
+    order.forEach(function(pair){
+      var list = groups[pair[0]];
+      if(!list.length) return;
+      any = true;
+      list.sort(function(a,b){ return parseISO(a.date)-parseISO(b.date); });
+      var g = document.createElement('div'); g.className='group';
+      g.innerHTML = '<div class="group-title">'+pair[1]+' <span class="count">('+list.length+')</span></div>';
+      var stack = document.createElement('div'); stack.className='stack';
+      list.forEach(function(ev){ stack.appendChild(renderCard(ev, {dated:true})); });
+      g.appendChild(stack);
+      container.appendChild(g);
+    });
+    if(!any){ container.innerHTML = '<div class="empty-hint">Nothing matches your filters right now.</div>'; }
+  }
+
+  // ---- Always & Upcoming tab ----
+  function renderStatic(){
+    var a = document.getElementById('anytimeStack'); a.innerHTML='';
+    ANYTIME.filter(passesFilters).forEach(function(ev){ a.appendChild(renderCard(ev)); });
+    if(!a.children.length) a.innerHTML='<div class="empty-hint">None match your filters.</div>';
+
+    var w = document.getElementById('watchStack'); w.innerHTML='';
+    WATCH.filter(passesFilters).forEach(function(ev){ w.appendChild(renderCard(ev)); });
+    if(!w.children.length) w.innerHTML='<div class="empty-hint">None match your filters.</div>';
+
+    var n = document.getElementById('nextyearStack'); n.innerHTML='';
+    NEXTYEAR.filter(passesFilters).forEach(function(ev){ n.appendChild(renderCard(ev)); });
+    if(!n.children.length) n.innerHTML='<div class="empty-hint">None match your filters.</div>';
+  }
+
+  function renderAll(){
+    renderCalendar();
+    renderAgenda();
+    renderStatic();
+  }
+
+  renderAll();
+
+  // ---- Backup / restore (localStorage only, no downloads) ----
+  var backupArea = document.getElementById('backupArea');
+  var backupText = document.getElementById('backupText');
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    var data = JSON.stringify(Array.from(state.interested));
+    backupArea.style.display='block';
+    backupText.value = data;
+    backupText.select();
+    try{ navigator.clipboard.writeText(data); }catch(e){}
+  });
+  document.getElementById('importBtn').addEventListener('click', function(){
+    backupArea.style.display='block';
+    backupText.value='';
+    backupText.focus();
+  });
+  document.getElementById('doImport').addEventListener('click', function(){
+    try{
+      var arr = JSON.parse(backupText.value);
+      if(Array.isArray(arr)){ state.interested = new Set(arr); saveInterested(); renderAll(); backupArea.style.display='none'; }
+    }catch(e){ alert('Could not read that — make sure you pasted the exact text you copied.'); }
+  });
+  document.getElementById('closeBackup').addEventListener('click', function(){ backupArea.style.display='none'; });
+})();
+</script>
